@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --card: #ffffff;
+    --ring: #a5b4fc;
+    --input: #737373;
+    --muted: #f0f0f0;
+    --accent: #f59e0b;
+    --border: #000000;
+    --radius: 1rem;
+    --chart-1: #4f46e5;
+    --chart-2: #14b8a6;
+    --chart-3: #f59e0b;
+    --chart-4: #ec4899;
+    --chart-5: #22c55e;
+    --popover: #ffffff;
+    --primary: #4f46e5;
+    --sidebar: #f7f9f3;
+    --spacing: 0.25rem;
+    --font-mono: Space Mono, monospace;
+    --font-sans: DM Sans, sans-serif;
+    --secondary: #14b8a6;
+    --background: #f7f9f3;
+    --font-serif: DM Sans, sans-serif;
+    --foreground: #000000;
+    --destructive: #ef4444;
+}
+
+.dark {
+    --card: #1a212b;
+    --ring: #818cf8;
+    --input: #ffffff;
+    --muted: #333333;
+    --accent: #fcd34d;
+    --border: #545454;
+    --primary: #818cf8;
+    --sidebar: #000000;
+    --secondary: #2dd4bf;
+    --background: #000000;
+    --foreground: #ffffff;
+    --destructive: #f87171;
+}
+
+body {
+  @apply bg-background text-foreground font-sans;
+}
