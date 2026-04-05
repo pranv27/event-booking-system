@@ -7,6 +7,8 @@ const CreateEvent = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -34,21 +36,44 @@ const CreateEvent = () => {
     fetchCategories();
   }, []);
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size exceeds 2MB limit!');
+        return;
+      }
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    console.log('Submitting Event:', formData); // Log for debugging
 
     try {
-      // Ensure we send numeric values where the backend expects them
-      const dataToSend = {
-        ...formData,
-        price: parseFloat(formData.price),
-        capacity: parseInt(formData.capacity),
-        banner_image: formData.banner // Map 'banner' to 'banner_image' for backend
-      };
+      const data = new FormData();
+      data.append('title', formData.title);
+      data.append('description', formData.description);
+      data.append('category_id', formData.category_id);
+      data.append('location', formData.location);
+      data.append('event_date', formData.event_date);
+      data.append('event_time', formData.event_time);
+      data.append('price', formData.price);
+      data.append('capacity', formData.capacity);
+      
+      if (image) {
+        data.append('banner_image', image);
+      } else if (formData.banner) {
+        data.append('banner_image', formData.banner);
+      }
 
-      await api.post('/events', dataToSend);
+      await api.post('/events', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       
       alert('Event launched successfully! 🚀');
       navigate('/events');
@@ -229,7 +254,36 @@ const CreateEvent = () => {
             </h2>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Banner Image URL</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Event Image</label>
+                <div className="flex flex-col gap-4">
+                  <div className="relative">
+                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="file"
+                      name="image"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none"
+                    />
+                  </div>
+                  {imagePreview && (
+                    <div className="relative w-full h-48 rounded-xl overflow-hidden border border-gray-200">
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <button 
+                        type="button" 
+                        onClick={() => { setImage(null); setImagePreview(null); }}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Or Image URL (Fallback)</label>
                 <div className="relative">
                   <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input

@@ -17,7 +17,14 @@ router.post(
   authorizeRoles('attendee'),
   [
     body('event_id').isInt().withMessage('Event ID must be an integer'),
-    body('ticket_quantity').isInt({ min: 1 }).withMessage('Ticket quantity must be at least 1'),
+    body('tickets').optional().isInt({ min: 1 }).withMessage('Tickets must be at least 1'),
+    body('ticket_quantity').optional().isInt({ min: 1 }).withMessage('Ticket quantity must be at least 1'),
+    body().custom((value) => {
+      if (!value.tickets && !value.ticket_quantity) {
+        throw new Error('Either tickets or ticket_quantity is required');
+      }
+      return true;
+    }),
   ],
   createBooking
 );

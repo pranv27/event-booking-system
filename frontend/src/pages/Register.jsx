@@ -20,8 +20,12 @@ const Register = () => {
     setLoading(true);
     setError('');
     try {
-      await register(formData);
-      navigate('/');
+      const res = await register(formData);
+      if (res.role === 'organizer') {
+        navigate('/organizer/dashboard');
+      } else {
+        navigate('/attendee/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
     } finally {

@@ -8,6 +8,7 @@ const {
   updateEventStatus,
   getCategories,
   createCategory,
+  getOrganizerStats,
 } = require('../controllers/eventController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 const upload = require('../config/multerConfig');
@@ -18,6 +19,7 @@ const router = express.Router();
 // Public routes for events
 router.get('/', getEvents);
 router.get('/categories', getCategories); // Moved up
+router.get('/organizer/stats', protect, authorizeRoles('organizer'), getOrganizerStats);
 router.get('/:id', getEventById);
 
 // Organizer and Admin routes for events

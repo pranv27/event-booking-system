@@ -1,22 +1,22 @@
 const db = require('../config/db');
 
 const Event = {
-  async create(title, description, location, event_date, event_time, category_id, price, capacity, banner_image, organizer_id) {
+  async create(title, description, location, event_date, event_time, category_id, price, capacity, banner_image, image_url, organizer_id) {
     const [result] = await db.execute(
-      'INSERT INTO events (title, description, location, event_date, event_time, category_id, price, capacity, banner_image, organizer_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [title, description, location, event_date, event_time, category_id, price, capacity, banner_image, organizer_id]
+      'INSERT INTO events (title, description, location, event_date, event_time, category_id, price, capacity, banner_image, image_url, organizer_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, description, location, event_date, event_time, category_id, price, capacity, banner_image, image_url, organizer_id]
     );
     return result.insertId;
   },
 
-  async getAll({ page = 1, limit = 10, category, location, date, search }) {
+  async getAll({ page = 1, limit = 10, category, location, date, search, organizer_id }) {
     const p = parseInt(page) || 1;
     const l = parseInt(limit) || 10;
     const offset = (p - 1) * l;
 
     let query = `
       SELECT
-        e.id, e.title, e.description, e.location, e.event_date, e.event_time, e.price, e.capacity, e.banner_image, e.status,
+        e.id, e.title, e.description, e.location, e.event_date, e.event_time, e.price, e.capacity, e.banner_image, e.image_url, e.status,
         c.name AS category_name,
         u.name AS organizer_name
       FROM events e
@@ -26,6 +26,10 @@ const Event = {
     `;
     const params = [];
 
+    if (organizer_id) {
+      query += ' AND e.organizer_id = ?';
+      params.push(organizer_id);
+    }
     if (category && category.trim() !== '') {
       query += ' AND c.name = ?';
       params.push(category);
@@ -60,6 +64,10 @@ const Event = {
         WHERE 1=1
       `;
       const countParams = [];
+      if (organizer_id) {
+        countQuery += ' AND e.organizer_id = ?';
+        countParams.push(organizer_id);
+      }
       if (category && category.trim() !== '') {
         countQuery += ' AND c.name = ?';
         countParams.push(category);
@@ -95,7 +103,7 @@ const Event = {
   async getById(id) {
     const [rows] = await db.execute(
       `SELECT
-        e.id, e.title, e.description, e.location, e.event_date, e.event_time, e.price, e.capacity, e.banner_image, e.status,
+        e.id, e.title, e.description, e.location, e.event_date, e.event_time, e.price, e.capacity, e.banner_image, e.image_url, e.status,
         c.name AS category_name,
         u.name AS organizer_name, u.id AS organizer_id
       FROM events e

@@ -9,22 +9,37 @@ const { validationResult } = require('express-validator');
 // @route   POST /api/bookings
 // @access  Attendee
 const createBooking = async (req, res) => {
+  console.log("--- DEBUG BOOKING ---");
+  console.log("BODY:", req.body);
+  console.log("USER:", req.user);
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    console.log("Validation Errors:", errors.array());
+    return res.status(400).json({ 
+      message: "Validation failed", 
+      errors: errors.array().map(err => ({ field: err.path, message: err.msg })) 
+    });
   }
 
-  const { event_id, ticket_quantity } = req.body;
+  const { event_id, tickets, ticket_quantity } = req.body;
+  const actualTickets = tickets || ticket_quantity;
   const user_id = req.user.id;
+
+  if (!event_id) {
+    return res.status(400).json({ message: "Event ID is required" });
+  }
+  if (!actualTickets || actualTickets <= 0) {
+    return res.status(400).json({ message: "Tickets must be greater than 0" });
+  }
 
   try {
     const event = await Event.getById(event_id);
-    const user = await User.findById(user_id); // Fetch user details for email
-
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
 
+    const user = await User.findById(user_id); 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -34,21 +49,21 @@ const createBooking = async (req, res) => {
     }
 
     const totalBooked = await Booking.getTotalTicketsBookedForEvent(event_id);
-    if (totalBooked + ticket_quantity > event.capacity) {
+    if (totalBooked + parseInt(actualTickets) > event.capacity) {
       return res.status(400).json({ message: 'Not enough tickets available' });
     }
 
-    const total_price = event.price * ticket_quantity;
+    const total_price = event.price * actualTickets;
 
     // 1. Create booking initially without QR code (pass null)
-    const bookingId = await Booking.create(user_id, event_id, ticket_quantity, total_price, null);
+    const bookingId = await Booking.create(user_id, event_id, actualTickets, total_price, null);
 
     // 2. Generate QR code now that we have bookingId
     const qrCodeData = {
       booking_id: bookingId,
       event_id,
       user_id,
-      ticket_quantity,
+      tickets: actualTickets,
       event_title: event.title,
       user_name: user.name,
     };
@@ -62,7 +77,7 @@ const createBooking = async (req, res) => {
     const htmlContent = `
       <p>Dear ${user.name},</p>
       <p>Your booking for the event "${event.title}" on ${event.event_date} at ${event.event_time} is confirmed!</p>
-      <p>Number of tickets: ${ticket_quantity}</p>
+      <p>Number of tickets: ${actualTickets}</p>
       <p>Total price: $${total_price.toFixed(2)}</p>
       <p>Your QR code for entry: <img src="${qr_code_data_url}" alt="QR Code" /></p>
       <p>We look forward to seeing you there!</p>
@@ -72,10 +87,15 @@ const createBooking = async (req, res) => {
     sendEmail(user.email, subject, htmlContent);
 
     res.status(201).json({
-      message: 'Booking created successfully',
-      bookingId,
-      total_price,
-      qr_code: qr_code_data_url, // Return the generated QR code data URL
+      message: 'Booking successful',
+      booking: {
+        id: bookingId,
+        event_id,
+        user_id,
+        tickets: actualTickets,
+        total_price,
+        qr_code: qr_code_data_url
+      }
     });
   } catch (error) {
     console.error('Error in createBooking:', error);

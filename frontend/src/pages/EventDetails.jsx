@@ -38,11 +38,11 @@ const EventDetails = () => {
   };
 
   const confirmBooking = async () => {
-    setBooking(true);
+    setBookingLoading(true);
     try {
-      await api.post('/bookings', { event_id: parseInt(id), ticket_quantity: 1 });
-      alert('Ticket booked successfully!');
-      navigate('/dashboard');
+      await api.post('/bookings', { event_id: parseInt(id), tickets: 1 });
+      alert('Ticket booked successfully! 🎟️');
+      navigate('/attendee/dashboard');
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to book ticket');
     } finally {

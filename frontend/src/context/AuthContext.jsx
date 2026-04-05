@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext();
@@ -7,22 +7,30 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const res = await api.get('/auth/profile');
-          setUser(res.data);
-        } catch (error) {
-          localStorage.removeItem('token');
-          setUser(null);
-        }
-      }
+  const checkAuth = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
       setLoading(false);
-    };
-    checkAuth();
+      return;
+    }
+
+    try {
+      // Use a custom header to avoid cache if needed, but 304 is usually fine
+      const res = await api.get('/auth/profile');
+      setUser(res.data);
+    } catch (error) {
+      console.error("Auth check failed:", error.response?.data || error.message);
+      localStorage.removeItem('token');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    console.log("AuthProvider mounted");
+    checkAuth();
+  }, [checkAuth]);
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
@@ -46,7 +54,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

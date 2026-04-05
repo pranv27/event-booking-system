@@ -60,6 +60,17 @@ const Booking = {
     );
     return rows[0].totalBooked || 0;
   },
+
+  async getTotalBookingsForOrganizer(organizer_id) {
+    const [rows] = await db.execute(
+      `SELECT COUNT(*) AS totalBookings, SUM(b.ticket_quantity) AS totalTickets
+       FROM bookings b
+       JOIN events e ON b.event_id = e.id
+       WHERE e.organizer_id = ?`,
+      [organizer_id]
+    );
+    return rows[0];
+  },
 };
 
 module.exports = Booking;

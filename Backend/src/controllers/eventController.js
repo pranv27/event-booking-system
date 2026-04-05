@@ -1,6 +1,29 @@
 const Event = require('../models/eventModel');
 const Category = require('../models/categoryModel');
+const Booking = require('../models/bookingModel');
 const { validationResult } = require('express-validator');
+const cloudinary = require('../config/cloudinaryConfig');
+
+// @desc    Get organizer statistics
+// @route   GET /api/events/organizer/stats
+// @access  Organizer
+const getOrganizerStats = async (req, res) => {
+  const organizer_id = req.user.id;
+
+  try {
+    const events = await Event.getAll({ organizer_id, limit: 1000 });
+    const stats = await Booking.getTotalBookingsForOrganizer(organizer_id);
+    
+    res.json({
+      totalEvents: events.total,
+      totalBookings: stats.totalBookings || 0,
+      totalTickets: stats.totalTickets || 0,
+      recentEvents: events.events.slice(0, 5)
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // @desc    Create a new event
 // @route   POST /api/events
@@ -19,9 +42,29 @@ const createEvent = async (req, res) => {
 
   const { title, description, location, event_date, event_time, category_id, price, capacity, banner_image: body_banner } = req.body;
   const organizer_id = req.user.id; 
-  const banner_image = req.file ? `/uploads/${req.file.filename}` : body_banner || null;
+  
+  let image_url = null;
+  let banner_image = body_banner || null;
 
   try {
+    if (req.file) {
+      // Upload to Cloudinary using upload_stream
+      const uploadPromise = new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'events' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+
+      const cloudinaryResponse = await uploadPromise;
+      image_url = cloudinaryResponse.secure_url;
+      banner_image = image_url; // Use Cloudinary URL as banner_image too for compatibility
+    }
+
     const eventId = await Event.create(
       title,
       description,
@@ -32,9 +75,12 @@ const createEvent = async (req, res) => {
       price,
       capacity,
       banner_image,
+      image_url,
       organizer_id
     );
-    res.status(201).json({ message: 'Event created successfully', eventId });
+    
+    const createdEvent = await Event.getById(eventId);
+    res.status(201).json({ message: 'Event created successfully', event: createdEvent });
   } catch (error) {
     console.error('Create Event Error:', error.message);
     
@@ -135,7 +181,9 @@ const updateEvent = async (req, res) => {
 
   const { id } = req.params;
   const organizer_id = req.user.id;
-  const banner_image = req.file ? `/uploads/${req.file.filename}` : null;
+  
+  let image_url = null;
+  let banner_image = req.body.banner_image || null;
 
   try {
     const event = await Event.getById(id);
@@ -148,12 +196,34 @@ const updateEvent = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this event' });
     }
 
+    if (req.file) {
+      // Upload to Cloudinary
+      const uploadPromise = new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'events' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+
+      const cloudinaryResponse = await uploadPromise;
+      image_url = cloudinaryResponse.secure_url;
+      banner_image = image_url;
+    }
+
     const updateData = { ...req.body };
-    if (banner_image) {
-      updateData.banner_image = banner_image;
+    if (image_url) {
+      updateData.image_url = image_url;
+      updateData.banner_image = image_url;
     } else if (req.body.banner_image) {
        updateData.banner_image = req.body.banner_image;
     }
+    
+    // Remove banner_image from updateData if it's handled separately or just let it be
+    // Since Event.update uses a loop, it will work.
 
     const affectedRows = await Event.update(id, updateData);
     if (affectedRows > 0) {
@@ -279,4 +349,5 @@ module.exports = {
   updateEventStatus,
   getCategories,
   createCategory,
+  getOrganizerStats,
 };

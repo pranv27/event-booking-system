@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import Loader from '../components/Loader';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import Loader from '../../components/Loader';
 import { Ticket, Calendar, MapPin, QrCode, ExternalLink } from 'lucide-react';
 
-const Dashboard = () => {
+const AttendeeDashboard = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,4 +119,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default AttendeeDashboard;

@@ -19,8 +19,12 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
-      navigate(from, { replace: true });
+      const res = await login(email, password);
+      if (res.role === 'organizer') {
+        navigate('/organizer/dashboard');
+      } else {
+        navigate('/attendee/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     } finally {
