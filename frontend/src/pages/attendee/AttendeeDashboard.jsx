@@ -70,7 +70,7 @@ const AttendeeDashboard = () => {
                   <div>
                     <div className="flex justify-between items-start mb-4">
                       <h3 className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors">
-                        {booking.title}
+                        {booking.event_title}
                       </h3>
                       <div className="bg-primary/5 text-primary p-2 rounded-xl">
                         <QrCode className="w-6 h-6" />

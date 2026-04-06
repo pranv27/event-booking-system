@@ -47,6 +47,9 @@ const Event = {
       params.push(`%${search}%`, `%${search}%`);
     }
 
+    // Add sorting: Latest events first
+    query += ' ORDER BY e.created_at DESC';
+
     // Explicitly append integers for LIMIT to avoid mysqld_stmt_execute errors
     query += ` LIMIT ${parseInt(offset)}, ${parseInt(l)}`;
 

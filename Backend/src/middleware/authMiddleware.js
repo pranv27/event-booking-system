@@ -17,7 +17,11 @@ const protect = async (req, res, next) => {
       req.user = rows[0];
       return next();
     } catch (error) {
-      console.error(error);
+      if (error.name === 'TokenExpiredError') {
+        console.error('JWT Token expired. Please login again.');
+      } else {
+        console.error('JWT Verification Error:', error.message);
+      }
       return res.status(401).json({ message: 'Not authorized, token failed' });
     }
   }

@@ -11,7 +11,8 @@ import {
   History, 
   BarChart3, 
   ChevronDown,
-  Layout
+  Layout,
+  Ticket
 } from 'lucide-react';
 
 const Navbar = () => {

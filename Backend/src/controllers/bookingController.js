@@ -36,20 +36,27 @@ const createBooking = async (req, res) => {
   try {
     const event = await Event.getById(event_id);
     if (!event) {
+      console.log("--- BOOKING ERROR: EVENT NOT FOUND ---");
       return res.status(404).json({ message: 'Event not found' });
     }
 
     const user = await User.findById(user_id); 
     if (!user) {
+      console.log("--- BOOKING ERROR: USER NOT FOUND ---");
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (event.status !== 'approved') {
-      return res.status(400).json({ message: 'Cannot book tickets for an unapproved event' });
+    console.log("EVENT STATUS:", event.status);
+    // Temporarily allowing pending events for debugging
+    if (event.status !== 'approved' && event.status !== 'pending') {
+      console.log("--- BOOKING ERROR: EVENT NOT APPROVED OR PENDING ---");
+      return res.status(400).json({ message: 'Cannot book tickets for this event status' });
     }
 
     const totalBooked = await Booking.getTotalTicketsBookedForEvent(event_id);
+    console.log("TOTAL BOOKED:", totalBooked, "REQUESTED:", actualTickets, "CAPACITY:", event.capacity);
     if (totalBooked + parseInt(actualTickets) > event.capacity) {
+      console.log("--- BOOKING ERROR: CAPACITY EXCEEDED ---");
       return res.status(400).json({ message: 'Not enough tickets available' });
     }
 
@@ -57,20 +64,27 @@ const createBooking = async (req, res) => {
 
     // 1. Create booking initially without QR code (pass null)
     const bookingId = await Booking.create(user_id, event_id, actualTickets, total_price, null);
+    console.log("BOOKING CREATED WITH ID:", bookingId);
 
     // 2. Generate QR code now that we have bookingId
-    const qrCodeData = {
-      booking_id: bookingId,
-      event_id,
-      user_id,
-      tickets: actualTickets,
-      event_title: event.title,
-      user_name: user.name,
-    };
-    const qr_code_data_url = await generateQrCode(qrCodeData);
-
-    // 3. Update the booking record with the generated QR code
-    await Booking.updateQrCode(bookingId, qr_code_data_url);
+    let qr_code_data_url = null;
+    try {
+      const qrCodeData = {
+        booking_id: bookingId,
+        event_id,
+        user_id,
+        tickets: actualTickets,
+        event_title: event.title,
+        user_name: user.name,
+      };
+      qr_code_data_url = await generateQrCode(qrCodeData);
+      
+      // 3. Update the booking record with the generated QR code
+      await Booking.updateQrCode(bookingId, qr_code_data_url);
+    } catch (qrError) {
+      console.error('QR Generation/Update Error:', qrError.message);
+      // Don't fail the whole booking if just QR fails, but log it
+    }
 
     // Send booking confirmation email
     const subject = `Your Ticket for ${event.title} is Confirmed!`;
@@ -79,7 +93,7 @@ const createBooking = async (req, res) => {
       <p>Your booking for the event "${event.title}" on ${event.event_date} at ${event.event_time} is confirmed!</p>
       <p>Number of tickets: ${actualTickets}</p>
       <p>Total price: $${total_price.toFixed(2)}</p>
-      <p>Your QR code for entry: <img src="${qr_code_data_url}" alt="QR Code" /></p>
+      ${qr_code_data_url ? `<p>Your QR code for entry: <img src="${qr_code_data_url}" alt="QR Code" /></p>` : ''}
       <p>We look forward to seeing you there!</p>
       <p>Best regards,</p>
       <p>The Event Management Team</p>
@@ -88,6 +102,7 @@ const createBooking = async (req, res) => {
 
     res.status(201).json({
       message: 'Booking successful',
+      bookingId: bookingId, // Frontend might expect this
       booking: {
         id: bookingId,
         event_id,

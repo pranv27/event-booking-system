@@ -62,13 +62,14 @@ const Booking = {
   },
 
   async getTotalBookingsForOrganizer(organizer_id) {
-    const [rows] = await db.execute(
-      `SELECT COUNT(*) AS totalBookings, SUM(b.ticket_quantity) AS totalTickets
+    const query = `SELECT COUNT(*) AS totalBookings, SUM(b.ticket_quantity) AS totalTickets
        FROM bookings b
        JOIN events e ON b.event_id = e.id
-       WHERE e.organizer_id = ?`,
-      [organizer_id]
-    );
+       WHERE e.organizer_id = ?`;
+    console.log('--- SQL DEBUG (Booking Model) ---');
+    console.log('Query:', query.replace(/\s+/g, ' ').trim());
+    console.log('Params:', [organizer_id]);
+    const [rows] = await db.execute(query, [organizer_id]);
     return rows[0];
   },
 };

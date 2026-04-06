@@ -38,7 +38,7 @@ const EventDetails = () => {
   };
 
   const confirmBooking = async () => {
-    setBookingLoading(true);
+    setBooking(true);
     try {
       await api.post('/bookings', { event_id: parseInt(id), tickets: 1 });
       alert('Ticket booked successfully! 🎟️');
